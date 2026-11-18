@@ -16,14 +16,27 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Fails if a source file lacks the GPLv3 licence header described in AGENTS.md.
+#   tools/check-license-headers.sh           every source file (CI's lint)
+#   tools/check-license-headers.sh FILE...   the source files among those given, from the
+#                                            repository's root, as pre-commit passes them
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+
+sources() {
+  if (($#)); then
+    printf '%s\n' "$@"
+  else
+    git ls-files --cached --others --exclude-standard '*.rs' '*.wgsl' '*.slang' '*.sh'
+  fi
+}
+
 missing=0
 while IFS= read -r file; do
+  [[ "$file" =~ \.(rs|wgsl|slang|sh)$ ]] || continue
   if ! head -n 20 "$file" | grep -q "GNU General Public License"; then
     echo "missing licence header: $file"
     missing=1
   fi
-done < <(git ls-files --cached --others --exclude-standard '*.rs' '*.wgsl' '*.slang' '*.sh')
+done < <(sources "$@")
 exit "$missing"
